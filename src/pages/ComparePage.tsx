@@ -3,7 +3,7 @@ import { useMemo, type ReactNode } from 'react'
 import { ErrorState, PageSkeleton } from '../components/Status'
 import { useData } from '../context/DataContext'
 import { usePreferences } from '../context/PreferencesContext'
-import { colourBadgeLabel, formatWard, percentileRank } from '../lib/normalize'
+import { colourBadgeLabel, formatWard, percentileProse } from '../lib/normalize'
 import { colourBandClasses, gradeInkClass } from '../lib/ui'
 import type { Building } from '../types'
 
@@ -94,7 +94,7 @@ function CompareColumn({
   scoredBuildings: Building[]
   onRemove: () => void
 }) {
-  const percentile = percentileRank(building, scoredBuildings)
+  const standing = percentileProse(building, scoredBuildings)
 
   return (
     <section className="panel flex flex-col">
@@ -157,10 +157,10 @@ function CompareColumn({
           }
         />
         <Metric
-          label="Percentile"
+          label="Standing"
           value={
-            <span className="font-semibold tabular-nums">
-              {percentile != null ? `${percentile}th` : '—'}
+            <span className="text-sm font-semibold leading-snug">
+              {standing ?? '—'}
             </span>
           }
         />

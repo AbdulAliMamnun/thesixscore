@@ -34,3 +34,32 @@ export function percentileRank(
   const below = scoredBuildings.filter((b) => (b.score ?? 0) < building.score!).length
   return Math.round((below / scoredBuildings.length) * 100)
 }
+
+/**
+ * Share of scored buildings this building outperforms, floored at 1 for the worst.
+ * Callers invert the prose for the top half.
+ */
+export function outperformShare(
+  building: Building,
+  scoredBuildings: Building[],
+): number | null {
+  if (building.score == null || scoredBuildings.length === 0) return null
+  const below = scoredBuildings.filter((b) => (b.score ?? 0) < building.score!).length
+  const pct = Math.round((below / scoredBuildings.length) * 100)
+  return Math.max(1, pct)
+}
+
+export function percentileProse(
+  building: Building,
+  scoredBuildings: Building[],
+): string | null {
+  const share = outperformShare(building, scoredBuildings)
+  if (share == null) return null
+  // Top half: share of buildings outperformed is >= 50 → "higher than"
+  if (share >= 50) {
+    return `Scores higher than ${share}% of inspected Toronto rental buildings.`
+  }
+  // Bottom half: invert to "lower than" using the complement, floored at 1
+  const lowerThan = Math.max(1, 100 - share)
+  return `Scores lower than ${lowerThan}% of inspected Toronto rental buildings.`
+}

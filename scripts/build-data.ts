@@ -49,6 +49,10 @@ import type {
   PipelineConfig,
   SourceAttribution,
 } from './lib/types.ts'
+import {
+  extractAreasEvaluated,
+  extractCategoryScores,
+} from '../src/lib/categories.ts'
 
 const execFileAsync = promisify(execFile)
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
@@ -119,6 +123,8 @@ function ensureBuilding(
     units: null,
     propertyType: null,
     rsn: null,
+    categoryScores: {},
+    areasEvaluated: null,
     records: [],
     signals: [],
     sources: [{ ...OGL_TORONTO }],
@@ -187,6 +193,49 @@ function detectScoreField(fields: string[]): string {
   )
 }
 
+function latestByRsn(
+  records: Record<string, unknown>[],
+): Map<string, Record<string, unknown>> {
+  const byRsn = new Map<string, Record<string, unknown>>()
+  for (const row of records) {
+    const rsn = String(getField(row, 'RSN') ?? '').trim()
+    if (!rsn) continue
+    const date = String(
+      getField(row, 'EVALUATION_COMPLETED_ON', 'EVALUATION COMPLETED ON') ?? '',
+    )
+    const prev = byRsn.get(rsn)
+    if (!prev) {
+      byRsn.set(rsn, row)
+      continue
+    }
+    const prevDate = String(
+      getField(prev, 'EVALUATION_COMPLETED_ON', 'EVALUATION COMPLETED ON') ?? '',
+    )
+    if (date >= prevDate) byRsn.set(rsn, row)
+  }
+  return byRsn
+}
+
+function applyCategoryFields(
+  doc: BuildingDoc,
+  row: Record<string, unknown>,
+  { preferExisting = false }: { preferExisting?: boolean } = {},
+): void {
+  const scores = extractCategoryScores(row)
+  const areas = extractAreasEvaluated(row)
+  if (Object.keys(scores).length > 0) {
+    if (preferExisting && doc.categoryScores && Object.keys(doc.categoryScores).length > 0) {
+      // Keep richer existing set; fill only missing keys from this row.
+      doc.categoryScores = { ...scores, ...doc.categoryScores }
+    } else {
+      doc.categoryScores = { ...(doc.categoryScores ?? {}), ...scores }
+    }
+  }
+  if (areas != null && (doc.areasEvaluated == null || !preferExisting)) {
+    doc.areasEvaluated = areas
+  }
+}
+
 async function applyRentSafe(
   spine: AddressSpine,
   bag: Map<string, BuildingDoc>,
@@ -210,24 +259,7 @@ async function applyRentSafe(
   const scoreField = detectScoreField(fields)
   console.log(`  confirmed score field: ${scoreField}`)
 
-  // Deduplicate latest by RSN
-  const byRsn = new Map<string, Record<string, unknown>>()
-  for (const row of records) {
-    const rsn = String(getField(row, 'RSN') ?? '').trim()
-    if (!rsn) continue
-    const date = String(
-      getField(row, 'EVALUATION_COMPLETED_ON', 'EVALUATION COMPLETED ON') ?? '',
-    )
-    const prev = byRsn.get(rsn)
-    if (!prev) {
-      byRsn.set(rsn, row)
-      continue
-    }
-    const prevDate = String(
-      getField(prev, 'EVALUATION_COMPLETED_ON', 'EVALUATION COMPLETED ON') ?? '',
-    )
-    if (date >= prevDate) byRsn.set(rsn, row)
-  }
+  const byRsn = latestByRsn(records)
 
   let matched = 0
   for (const row of byRsn.values()) {
@@ -254,6 +286,7 @@ async function applyRentSafe(
     doc.propertyType = String(
       getField(row, 'PROPERTY_TYPE', 'PROPERTY TYPE') ?? '',
     ) || null
+    applyCategoryFields(doc, row)
     ensureSource(doc, {
       ...OGL_TORONTO,
       name: 'RentSafeTO Apartment Building Evaluation',
@@ -262,6 +295,31 @@ async function applyRentSafe(
     matched++
   }
   console.log(`  matched evaluations: ${matched}`)
+
+  // Pre-2023 schema carries the canonical CATEGORY_META fields. Join by RSN to
+  // fill any categories the current resource does not expose under those names.
+  const legacy = pkg.resources?.find(
+    (r) =>
+      r.datastore_active &&
+      /pre-?2023/i.test(`${r.name ?? ''} ${r.description ?? ''}`),
+  )
+  if (legacy?.id) {
+    console.log(`  category enrich from ${legacy.id} (${legacy.name})`)
+    const { records: legacyRecords } = await datastoreAll(legacy.id)
+    const legacyByRsn = latestByRsn(legacyRecords)
+    let enriched = 0
+    for (const doc of bag.values()) {
+      if (!doc.rsn) continue
+      const row = legacyByRsn.get(doc.rsn)
+      if (!row) continue
+      const before = Object.keys(doc.categoryScores ?? {}).length
+      applyCategoryFields(doc, row, { preferExisting: true })
+      if (Object.keys(doc.categoryScores ?? {}).length > before) enriched++
+      else if (before === 0 && Object.keys(doc.categoryScores ?? {}).length > 0)
+        enriched++
+    }
+    console.log(`  category-enriched buildings: ${enriched}`)
+  }
 }
 
 async function applyRegistration(
@@ -854,6 +912,11 @@ async function emitBuildings(bag: Map<string, BuildingDoc>): Promise<void> {
       rentSafeScore: b.rentSafeScore ?? null,
       lastInspected: b.lastInspected ?? null,
       hazard: b.signals.some((s) => s.hazard),
+      categoryScores:
+        b.categoryScores && Object.keys(b.categoryScores).length > 0
+          ? b.categoryScores
+          : undefined,
+      areasEvaluated: b.areasEvaluated ?? null,
     })),
   }
 

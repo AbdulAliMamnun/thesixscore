@@ -25,6 +25,8 @@ async function loadDatasetFresh(): Promise<LoadedDataset> {
       tier: row.tier,
       rentSafeScore: row.rentSafeScore,
       lastInspected: row.lastInspected,
+      categoryScores: row.categoryScores,
+      areasEvaluated: row.areasEvaluated ?? null,
       records: [],
       signals: row.hazard
         ? [

@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react'
 import type { Building } from '../types'
-import { colourBadgeLabel, formatWard, percentileRank } from '../lib/normalize'
+import { colourBadgeLabel, formatWard, percentileProse } from '../lib/normalize'
 import { gradeInkClass, colourBandClasses, shareBuilding } from '../lib/ui'
 import { usePreferences } from '../context/PreferencesContext'
 import { TENANT_REVIEW_LINK_OUT, TIER_COPY } from '../lib/buildings'
 import { track } from '../lib/analytics'
 import { UsefulVote } from './UsefulVote'
+import { WhyThisScore } from './WhyThisScore'
 
 export function BuildingDetail({
   building,
@@ -36,7 +37,7 @@ export function BuildingDetail({
     })
   }, [building.letterGrade, building.wardName, building.ward, id])
 
-  const percentile = percentileRank(building, scoredBuildings)
+  const percentileLine = percentileProse(building, scoredBuildings)
 
   async function onShare() {
     setShareNote(null)
@@ -152,11 +153,8 @@ export function BuildingDetail({
                   {colourBadgeLabel(building.colourBand)}
                 </span>
               )}
-              {percentile != null && (
-                <span className="text-ink-muted">
-                  {percentile}th percentile among scored RentSafeTO buildings in this
-                  dataset
-                </span>
+              {percentileLine && (
+                <span className="text-ink-muted">{percentileLine}</span>
               )}
             </div>
           </div>
@@ -170,6 +168,8 @@ export function BuildingDetail({
           </div>
         )}
       </section>
+
+      {tier === 1 && building.score != null && <WhyThisScore building={building} />}
 
       {(building.records?.length || building.signals?.length) ? (
         <section className="border-b border-line px-5 py-6 sm:px-8">
@@ -213,27 +213,45 @@ export function BuildingDetail({
           <Fact label="Units" value={building.confirmedUnits} />
           <Fact label="Storeys" value={building.confirmedStoreys} />
           <Fact label="Property type" value={building.propertyType} />
-          <Fact label="RSN" value={building.rsn} />
-          <Fact label="Address id" value={building.addressPointId} />
         </dl>
       </section>
 
-      {building.sources && building.sources.length > 0 && (
-        <section className="border-b border-line px-5 py-6 sm:px-8">
-          <h2 className="font-display text-xl font-semibold">Sources & licences</h2>
-          <ul className="mt-3 space-y-2 text-sm text-ink-muted">
-            {building.sources.map((s, i) => (
-              <li key={`${s.name}-${i}`}>
-                <a href={s.url} className="font-semibold text-accent" target="_blank" rel="noreferrer">
-                  {s.name}
-                </a>
-                {' — '}
-                {s.licence}. {s.attribution}
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
+      <section className="border-b border-line px-5 py-6 sm:px-8">
+        <details className="group">
+          <summary className="cursor-pointer font-display text-xl font-semibold list-none [&::-webkit-details-marker]:hidden">
+            Data provenance
+            <span className="ml-2 text-xs font-sans font-semibold text-ink-muted group-open:hidden">
+              Show
+            </span>
+            <span className="ml-2 hidden text-xs font-sans font-semibold text-ink-muted group-open:inline">
+              Hide
+            </span>
+          </summary>
+          <dl className="mt-4 grid grid-cols-2 gap-4 text-sm sm:grid-cols-3">
+            <Fact label="RSN" value={building.rsn} />
+            <Fact label="Address id" value={building.addressPointId} />
+            <Fact label="Evaluation date" value={building.evaluationCompletedOn} />
+          </dl>
+          {building.sources && building.sources.length > 0 && (
+            <ul className="mt-4 space-y-2 text-sm text-ink-muted">
+              {building.sources.map((s, i) => (
+                <li key={`${s.name}-${i}`}>
+                  <a
+                    href={s.url}
+                    className="font-semibold text-accent"
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    {s.name}
+                  </a>
+                  {' — '}
+                  {s.licence}. {s.attribution}
+                </li>
+              ))}
+            </ul>
+          )}
+        </details>
+      </section>
 
       <footer className="space-y-4 bg-canvas px-5 py-4 sm:px-8">
         <UsefulVote address={building.siteAddress} />

@@ -1,4 +1,5 @@
 import type { Building, BuildingDoc, BuildingsIndex, ColourBand, LetterGrade } from '../types'
+import { buildTags } from './categories'
 import { colourFromScore, letterGradeFromScore } from './normalize'
 
 function enrich(doc: BuildingDoc): BuildingDoc {
@@ -14,6 +15,8 @@ function enrich(doc: BuildingDoc): BuildingDoc {
 
 export function docToBuilding(doc: BuildingDoc): Building {
   const e = enrich(doc)
+  const categoryScores = e.categoryScores ?? {}
+  const tags = buildTags(categoryScores)
   return {
     rsn: e.rsn || e.id,
     siteAddress: e.address,
@@ -33,7 +36,14 @@ export function docToBuilding(doc: BuildingDoc): Building {
     colourFromField: false,
     letterGrade: (e.letterGrade as LetterGrade | null) ?? null,
     gradeDerivedFromColour: false,
-    subScores: [],
+    subScores: tags.map((t) => ({
+      key: t.field,
+      label: t.label,
+      value: t.score,
+      max: 3,
+    })),
+    categoryScores,
+    areasEvaluated: e.areasEvaluated ?? null,
     raw: e as unknown as Record<string, unknown>,
     addressPointId: e.id,
     slug: e.slug,

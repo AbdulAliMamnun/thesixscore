@@ -45,6 +45,10 @@ export interface BuildingDoc {
   units?: number | null
   propertyType?: string | null
   rsn?: string | null
+  /** Canonical RentSafeTO category field → score (non-zero only). */
+  categoryScores?: Record<string, number>
+  /** NO_OF_AREAS_EVALUATED from source when present. */
+  areasEvaluated?: number | null
   records: BuildingRecord[]
   signals: BuildingSignal[]
   sources: SourceAttribution[]

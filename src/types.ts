@@ -42,6 +42,8 @@ export interface BuildingDoc {
   units?: number | null
   propertyType?: string | null
   rsn?: string | null
+  categoryScores?: Record<string, number>
+  areasEvaluated?: number | null
   records: BuildingRecord[]
   signals: BuildingSignal[]
   sources: SourceAttribution[]
@@ -71,6 +73,8 @@ export interface BuildingsIndex {
     rentSafeScore: number | null
     lastInspected: string | null
     hazard: boolean
+    categoryScores?: Record<string, number>
+    areasEvaluated?: number | null
   }>
 }
 
@@ -95,6 +99,8 @@ export type Building = {
   letterGrade: LetterGrade | null
   gradeDerivedFromColour: boolean
   subScores: { key: string; label: string; value: number; max: number }[]
+  categoryScores?: Record<string, number>
+  areasEvaluated?: number | null
   raw: Record<string, unknown>
   addressPointId?: string
   slug?: string

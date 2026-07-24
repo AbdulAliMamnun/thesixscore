@@ -3,6 +3,8 @@ import type { Building } from '../types'
 import { colourBadgeLabel } from '../lib/normalize'
 import { colourBandClasses, gradeInkClass } from '../lib/ui'
 import { usePreferences } from '../context/PreferencesContext'
+import { buildTags } from '../lib/categories'
+import { CategoryChipRow } from './CategoryChips'
 
 function recordKey(building: Building): string {
   return building.addressPointId || building.rsn
@@ -25,6 +27,7 @@ export function BuildingListItem({
     : building.addressPointId
       ? `/address/${building.addressPointId}`
       : `/building/${building.rsn}`
+  const categoryTags = buildTags(building.categoryScores ?? {})
 
   return (
     <div
@@ -55,7 +58,7 @@ export function BuildingListItem({
         }}
         className="group flex min-w-0 flex-1 items-center justify-between gap-3 px-3 py-3 no-underline transition hover:bg-accent-soft/60"
       >
-        <div className="min-w-0">
+        <div className="min-w-0 flex-1">
           <div className="truncate font-semibold tracking-tight text-ink group-hover:text-accent">
             {building.siteAddress}
           </div>
@@ -68,6 +71,7 @@ export function BuildingListItem({
               .filter(Boolean)
               .join(' · ') || 'Toronto'}
           </div>
+          {building.tier === 1 && <CategoryChipRow tags={categoryTags} />}
         </div>
         <div className="flex shrink-0 items-center gap-2.5">
           {building.hazardFlag && (
