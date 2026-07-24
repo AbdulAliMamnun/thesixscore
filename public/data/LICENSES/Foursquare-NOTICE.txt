@@ -1,0 +1,5 @@
+Foursquare OS Places — NOTICE
+
+This product includes data from Foursquare Open Source Places (Apache License 2.0).
+See https://opensource.foursquare.com/os-places/ and the Apache 2.0 license.
+If a vendor NOTICE.txt is obtained at build time, it replaces this placeholder.

@@ -1,0 +1,33 @@
+{
+  "name": "thesixscore",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Explore Toronto RentSafeTO apartment building evaluations with TheSixScore",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "lint": "oxlint",
+    "preview": "vite preview",
+    "data:build": "tsx scripts/build-data.ts",
+    "data:build:quick": "tsx scripts/build-data.ts --quick",
+    "data:build:legacy": "python3 scripts/pipeline/build_coverage.py --full"
+  },
+  "dependencies": {
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7",
+    "react-router-dom": "^7.18.1"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.3.3",
+    "@types/node": "^24.13.3",
+    "@types/react": "^19.2.17",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^6.0.3",
+    "oxlint": "^1.71.0",
+    "tailwindcss": "^4.3.3",
+    "tsx": "^4.23.1",
+    "typescript": "~6.0.2",
+    "vite": "^8.1.1"
+  }
+}

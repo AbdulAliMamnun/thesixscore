@@ -1,0 +1,54 @@
+name: Build coverage data
+
+on:
+  schedule:
+    - cron: '0 10 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-data:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Setup Python (overturemaps CLI)
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: |
+          npm ci
+          pip install overturemaps duckdb
+
+      - name: Build static buildings.json
+        env:
+          # Keep seniors gated until reuse terms are confirmed by a human.
+          SENIORS_SIGNAL_ENABLED: 'false'
+          # Optional enrichment: do not fail the whole job if CLI/extract missing.
+          OVERTURE_REQUIRED: 'false'
+          FOURSQUARE_REQUIRED: 'false'
+        run: npm run data:build
+
+      - name: Commit if buildings.json changed
+        run: |
+          git config user.name "thesixscore-bot"
+          git config user.email "bot@thesixscore.local"
+          git add public/data
+          if git diff --staged --quiet; then
+            echo "No data changes"
+          else
+            git commit -m "chore: refresh TheSixScore buildings.json coverage"
+            git push
+          fi
